@@ -41,7 +41,7 @@ jobs:
           version: 'latest'
       - name: Deploy RayService
         run: |
-          sed -i "s|image: sagark24/ray-serve:.*|image: $IMAGE_NAME:$TAG|" rayservice.yaml
+          sed -i "s|image: sagark24/ray-serve:.*|image: $IMAGE_NAME:$TAG|" ray-service.yaml
           kubectl apply -f ray-service.yaml
 
       # Step 8: Verify the deployment
