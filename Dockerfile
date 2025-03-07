@@ -7,6 +7,5 @@ WORKDIR /app
 COPY summarize.py /app
 COPY requirements.txt /app
 
-RUN pip install torch transformers fastapi
 RUN pip install -r requirements.txt
 
