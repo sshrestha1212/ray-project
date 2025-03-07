@@ -1,0 +1,73 @@
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: rayservice-sample
+spec:
+  serveConfigV2: |
+    applications:
+      - name: app
+        import_path: summarize:app
+        route_prefix: /
+        runtime_env:
+           pip: ["torch", "transformers", "fastapi"]
+        deployments:
+          - name: Translator
+            num_replicas: 2
+            ray_actor_options:
+              num_cpus: 0.2
+          - name: Summarizer
+            num_replicas: 1
+            ray_actor_options:
+              num_cpus: 0.2
+  rayClusterConfig:
+    rayVersion: '2.41.0' # should match the Ray version in the image of the containers
+    ######################headGroupSpecs#################################
+    # Ray head pod template.
+    headGroupSpec:
+      rayStartParams: {}
+      #pod template
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              image: sagark24/ray-serve:latest
+              ports:
+                - containerPort: 6379
+                  name: gcs-server
+                - containerPort: 8265 # Ray dashboard
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+                - containerPort: 8000
+                  name: serve
+                - containerPort: 44217
+                  name: as-metrics # autoscaler
+                - containerPort: 44227
+                  name: dash-metrics # dashboard
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: "2G"
+                requests:
+                  cpu: "1"
+                  memory: "2G"
+    workerGroupSpecs:
+      # the pod replicas in this group typed worker
+      - replicas: 1
+        minReplicas: 1
+        maxReplicas: 5
+        groupName: small-group
+        rayStartParams: {}
+        #pod template
+        template:
+          spec:
+            containers:
+              - name: ray-worker # must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc'
+                image: sagark24/ray-serve:latest
+                resources:
+                  limits:
+                    cpu: "1"
+                    memory: "2Gi"
+                  requests:
+                    cpu: "500m"
+                    memory: "2Gi"
