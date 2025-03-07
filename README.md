@@ -1,6 +1,7 @@
 # Ray Project Deploy From RayService
 
 ## What’s a RayService?
+
 A RayService manages these components:
 
 - RayCluster: Manages resources in a Kubernetes cluster.
