@@ -1,0 +1,51 @@
+name: CI/CD Pipeline for RayService
+
+on:
+  push:
+    branches:
+      - main  
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        id: docker_build
+        run: |
+          # Set the image name and tag (using the commit SHA)
+          IMAGE_NAME="sagark24/ray-serve"
+          TAG=$(git rev-parse --short HEAD)
+          FULL_IMAGE_NAME="$IMAGE_NAME:$TAG"
+
+          # Build the Docker image
+          docker build -t $FULL_IMAGE_NAME .
+
+          # Push the Docker image
+          docker push $FULL_IMAGE_NAME
+
+          # Output the image name and tag for use in later steps
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      - name: Deploy RayService
+        run: |
+          sed -i "s|image: sagark24/ray-serve:.*|image: $IMAGE_NAME:$TAG|" rayservice.yaml
+          kubectl apply -f ray-service.yaml
+
+      # Step 8: Verify the deployment
+      - name: Verify deployment
+        run: |
+          kubectl get rayservice rayservice-sample
+          kubectl get pods -l ray.io/cluster=rayservice-sample
